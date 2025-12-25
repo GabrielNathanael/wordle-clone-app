@@ -1,18 +1,137 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import toast from "react-hot-toast";
 
 import Grid from "./components/Grid";
 import Keyboard from "./components/Keyboard";
+import Stats from "./components/Stats";
+import ShareButton from "./components/ShareButton";
+import CountdownTimer from "./components/CountdownTimer";
+import HowToPlay from "./components/HowToPlay";
+import Footer from "./components/Footer";
+import ThemeToggle from "./components/ThemeToggle";
 import { evaluateGuess } from "./utils/evaluateGuess";
 
-const ANSWER = "APPLE";
+import WORDS from "./data/words.json";
 
-function App() {
+/* ============================= Helpers ============================= */
+function getUTCDateKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function hashString(str) {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function pickDailyWord(words, todayKey) {
+  const h = hashString(todayKey);
+  const index = h % words.length;
+  return words[index];
+}
+
+function pickRandomWord(words) {
+  return words[Math.floor(Math.random() * words.length)];
+}
+
+function dailyCompletedKey(todayKey) {
+  return `wordle:daily:completed:${todayKey}`;
+}
+
+function dailyFailedKey(todayKey) {
+  return `wordle:daily:failed:${todayKey}`;
+}
+
+/* ============================= Stats Helpers ============================= */
+function getStats() {
+  const saved = localStorage.getItem("wordle:stats");
+  return saved
+    ? JSON.parse(saved)
+    : { played: 0, won: 0, currentStreak: 0, maxStreak: 0 };
+}
+
+function saveStats(stats) {
+  localStorage.setItem("wordle:stats", JSON.stringify(stats));
+}
+
+function updateStatsOnWin(stats) {
+  const newStats = {
+    played: stats.played + 1,
+    won: stats.won + 1,
+    currentStreak: stats.currentStreak + 1,
+    maxStreak: Math.max(stats.maxStreak, stats.currentStreak + 1),
+  };
+  saveStats(newStats);
+  return newStats;
+}
+
+function updateStatsOnLoss(stats) {
+  const newStats = {
+    played: stats.played + 1,
+    won: stats.won,
+    currentStreak: 0,
+    maxStreak: stats.maxStreak,
+  };
+  saveStats(newStats);
+  return newStats;
+}
+
+/* ============================= App ============================= */
+export default function App() {
+  const WORD_SET = useMemo(() => new Set(WORDS), []);
+
+  const [todayKey, setTodayKey] = useState(() => getUTCDateKey());
+  const [stats, setStats] = useState(getStats);
+
+  const dailyCompleted = useMemo(
+    () => localStorage.getItem(dailyCompletedKey(todayKey)),
+    [todayKey]
+  );
+
+  const dailyFailed = useMemo(
+    () => localStorage.getItem(dailyFailedKey(todayKey)),
+    [todayKey]
+  );
+
+  const mode = dailyFailed
+    ? "daily-locked"
+    : dailyCompleted
+    ? "practice"
+    : "daily";
+
+  const dailyAnswer = useMemo(() => pickDailyWord(WORDS, todayKey), [todayKey]);
+
+  const [answer, setAnswer] = useState(() =>
+    dailyCompleted ? pickRandomWord(WORDS) : dailyAnswer
+  );
+
   const [guesses, setGuesses] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
   const [keyStatuses, setKeyStatuses] = useState({});
-  const [gameStatus, setGameStatus] = useState("playing");
+  const [gameStatus, setGameStatus] = useState(
+    dailyFailed ? "locked" : "playing"
+  );
+  const [shake, setShake] = useState(false);
 
+  /* ============================= Reset ============================= */
+  const resetBoard = useCallback(() => {
+    setGuesses([]);
+    setStatuses([]);
+    setCurrentGuess("");
+    setKeyStatuses({});
+    setGameStatus("playing");
+  }, []);
+
+  const startPractice = useCallback(() => {
+    resetBoard();
+    setAnswer(pickRandomWord(WORDS));
+  }, [resetBoard]);
+
+  /* ============================= Key Handler ============================= */
   const handleKeyPress = useCallback(
     (key) => {
       if (gameStatus !== "playing") return;
@@ -21,7 +140,14 @@ function App() {
         if (currentGuess.length !== 5) return;
         if (guesses.length >= 6) return;
 
-        const evaluation = evaluateGuess(currentGuess, ANSWER);
+        if (!WORD_SET.has(currentGuess)) {
+          setShake(true);
+          setTimeout(() => setShake(false), 500);
+          toast.error("Word not found");
+          return;
+        }
+
+        const evaluation = evaluateGuess(currentGuess, answer);
         const nextGuesses = [...guesses, currentGuess];
 
         setGuesses(nextGuesses);
@@ -42,15 +168,45 @@ function App() {
           return next;
         });
 
-        if (currentGuess === ANSWER) {
-          setGameStatus("won");
-          setCurrentGuess("");
+        /* WIN */
+        if (currentGuess === answer) {
+          setStats((prev) => updateStatsOnWin(prev));
+
+          if (mode === "daily") {
+            localStorage.setItem(dailyCompletedKey(todayKey), "1");
+            toast.success("Brilliant! Practice mode unlocked");
+            setTimeout(() => startPractice(), 2000);
+            return;
+          }
+
+          toast.success("Correct! Next word...");
+          setTimeout(() => {
+            resetBoard();
+            setAnswer(pickRandomWord(WORDS));
+          }, 2000);
           return;
         }
 
+        /* LOSE */
         if (nextGuesses.length === 6) {
+          setStats((prev) => updateStatsOnLoss(prev));
+
+          if (mode === "daily") {
+            localStorage.setItem(dailyFailedKey(todayKey), "1");
+            setGameStatus("locked");
+            toast.error(
+              `The word was ${answer.toUpperCase()}. See you tomorrow!`,
+              {
+                duration: 5000,
+              }
+            );
+            return;
+          }
+
           setGameStatus("lost");
-          setCurrentGuess("");
+          toast.error(`The word was ${answer.toUpperCase()}`, {
+            duration: 5000,
+          });
           return;
         }
 
@@ -58,68 +214,183 @@ function App() {
         return;
       }
 
-      // ⌫ BACKSPACE
       if (key === "⌫") {
         setCurrentGuess((prev) => prev.slice(0, -1));
         return;
       }
 
-      // 🔤 INPUT HURUF
       if (/^[A-Z]$/.test(key) && currentGuess.length < 5) {
         setCurrentGuess((prev) => prev + key);
       }
     },
-    [currentGuess, guesses, gameStatus]
+    [
+      WORD_SET,
+      answer,
+      currentGuess,
+      guesses,
+      gameStatus,
+      mode,
+      resetBoard,
+      startPractice,
+      todayKey,
+    ]
   );
 
-  // ⌨️ KEYBOARD FISIK
+  /* ============================= Physical Keyboard ============================= */
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const onKeyDown = (e) => {
       if (gameStatus !== "playing") return;
 
-      const key = e.key.toUpperCase();
+      if (e.key === "Enter") return handleKeyPress("ENTER");
+      if (e.key === "Backspace") return handleKeyPress("⌫");
 
-      if (key === "ENTER") {
-        handleKeyPress("ENTER");
-        return;
-      }
-
-      if (key === "BACKSPACE") {
-        handleKeyPress("⌫");
-        return;
-      }
-
-      if (/^[A-Z]$/.test(key)) {
-        handleKeyPress(key);
-      }
+      const k = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(k)) handleKeyPress(k);
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleKeyPress, gameStatus]);
 
+  /* ============================= UTC Midnight Watcher ============================= */
+  useEffect(() => {
+    const id = setInterval(() => {
+      const tk = getUTCDateKey();
+      setTodayKey((prev) => (prev === tk ? prev : tk));
+    }, 30_000);
+
+    return () => clearInterval(id);
+  }, []);
+
+  /* ============================= New Day Handler ============================= */
+  const lastToastMode = useRef(null);
+  useEffect(() => {
+    if (lastToastMode.current === mode) return;
+    lastToastMode.current = mode;
+
+    if (mode === "daily") {
+      toast("Ready for today's challenge?", { icon: "🗓️" });
+    }
+
+    if (mode === "practice") {
+      toast("Practice mode active!", { icon: "🎮" });
+    }
+
+    if (mode === "daily-locked") {
+      toast("See you tomorrow for a new word!", { icon: "🔒" });
+    }
+  }, [mode]);
+
+  /* ============================= UI ============================= */
+  const subtitle =
+    mode === "daily"
+      ? `Daily Challenge`
+      : mode === "daily-locked"
+      ? `Daily Locked`
+      : "Practice Mode";
+
+  const modeBadgeColor =
+    mode === "daily"
+      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
+      : mode === "daily-locked"
+      ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700";
+
   return (
-    <div className="w-full h-full bg-neutral-900 text-white flex flex-col items-center pt-10">
-      <h1 className="text-4xl font-bold text-green-400 mb-6">Wordle</h1>
+    <div className="min-h-screen w-full bg-stone-50 dark:bg-neutral-950 text-slate-900 dark:text-white flex flex-col items-center px-4 pt-12 pb-8 transition-colors overflow-x-hidden">
+      {/* Header */}
+      <div className="w-full max-w-lg flex flex-col mb-6 gap-2">
+        <div className="relative flex items-center justify-center w-full">
+          <img
+            src="/logo.png"
+            alt="Wordly"
+            className="h-10 w-auto object-contain"
+          />
+          <div className="absolute right-0">
+            <ThemeToggle />
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <span
+            className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold border transition-all duration-300 ${modeBadgeColor}`}
+          >
+            {subtitle}
+          </span>
+        </div>
+      </div>
 
-      <Grid guesses={guesses} currentGuess={currentGuess} statuses={statuses} />
-
-      {gameStatus === "won" && (
-        <p className="mt-4 text-green-400 font-bold text-lg">🎉 You Win!</p>
+      {/* Countdown Timer (only when locked) */}
+      {mode === "daily-locked" && (
+        <div className="mb-4">
+          <CountdownTimer />
+        </div>
       )}
 
-      {gameStatus === "lost" && (
-        <p className="mt-4 text-red-400 font-bold text-lg">
-          😵 You Lose! Word was <span className="underline">{ANSWER}</span>
-        </p>
-      )}
+      {/* Stats */}
+      <div className="mb-8">
+        <Stats stats={stats} />
+      </div>
 
-      <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
+      {/* Grid */}
+      <div className={shake ? "animate-shake" : ""}>
+        <Grid
+          guesses={guesses}
+          currentGuess={currentGuess}
+          statuses={statuses}
+        />
+      </div>
+
+      {/* Feedback & Status Area */}
+      <div className="flex flex-col items-center justify-center min-h-15 my-4 gap-4 w-full">
+        {gameStatus === "lost" && mode === "practice" && (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-red-500 font-bold">
+              The word was: {answer.toUpperCase()}
+            </p>
+            <button
+              onClick={() => {
+                resetBoard();
+                setAnswer(pickRandomWord(WORDS));
+              }}
+              className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
+            >
+              Play Again
+            </button>
+          </div>
+        )}
+
+        {gameStatus === "locked" && (
+          <div className="text-center">
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
+              The word was:{" "}
+              <span className="font-bold">{answer.toUpperCase()}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Share Button (show after win) */}
+        {(gameStatus === "won" ||
+          (guesses.length > 0 && guesses[guesses.length - 1] === answer)) && (
+          <div>
+            <ShareButton
+              statuses={statuses}
+              todayKey={todayKey}
+              attempts={guesses.length}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Keyboard Area */}
+      <div className="flex justify-center pb-8">
+        <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
+      </div>
+
+      {/* How to Play */}
+      <HowToPlay />
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
-
-export default App;

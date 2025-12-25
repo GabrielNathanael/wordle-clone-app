@@ -1,18 +1,69 @@
-# React + Vite
+# Wordly
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple Wordle clone built with React and Vite.  
+This project focuses on implementing core Wordle mechanics such as daily challenges, word validation, and keyboard feedback without using a backend or database.
 
-Currently, two official plugins are available:
+![Wordly Logo](public/logo.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features
 
-## React Compiler
+- **Daily Challenge (UTC-based)**  
+  One deterministic word per day shared by all users.
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- **Practice Mode**  
+  Unlimited random words after completing the daily challenge.
 
-Note: This will impact Vite dev & build performances.
+- **Word Validation**  
+  Guesses are checked against a predefined word list.
 
-## Expanding the ESLint configuration
+- **Keyboard Feedback**  
+  Correct, present, and absent letter states with proper priority handling.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Local Storage Persistence**  
+  Daily completion and lock state are stored locally in the browser.
+
+## 🚀 Live Demo
+
+Check out the live app at: [wordly.gabrielnathanael.site](https://wordly.gabrielnathanael.site/)
+
+## 🛠️ Tech Stack
+
+- **Framework**: [React](https://reactjs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Toasts**: [React Hot Toast](https://react-hot-toast.com/)
+- **Build Tool**: [Vite](https://vite.dev/)
+
+## 📦 Installation
+
+To run this project locally:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/GabrielNathanael/wordle-clone-app.git
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd wordle-clone-app
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## 📜 Credits
+
+The word bank list used in this project is sourced from this [Gist by dracos](https://gist.github.com/dracos/dd0668f281e685bad51479e5acaadb93).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+Created by [Gabriel Nathanael](https://gabrielnathanael.site/)

@@ -1,3 +1,5 @@
+import { motion as Motion } from "framer-motion";
+
 export default function Grid({
   guesses = [],
   currentGuess = "",
@@ -11,6 +13,7 @@ export default function Grid({
       {Array.from({ length: rows }).map((_, rowIndex) => {
         const guess = guesses[rowIndex] || "";
         const isCurrentRow = rowIndex === guesses.length;
+        const isSubmittedRow = rowIndex < guesses.length;
 
         return (
           <div key={rowIndex} className="grid grid-cols-5 gap-2">
@@ -22,28 +25,87 @@ export default function Grid({
 
               const status = statuses[rowIndex]?.[colIndex];
 
-              const bg =
+              const bgColor =
                 status === "correct"
-                  ? "bg-green-600 border-green-600"
+                  ? "bg-emerald-500 border-emerald-500"
                   : status === "present"
-                  ? "bg-yellow-500 border-yellow-500"
+                  ? "bg-amber-400 border-amber-400"
                   : status === "absent"
-                  ? "bg-neutral-700 border-neutral-700"
-                  : "border-neutral-700";
+                  ? "bg-slate-400 dark:bg-neutral-600 border-slate-400 dark:border-neutral-600"
+                  : "border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-800";
 
-              return (
-                <div
-                  key={colIndex}
-                  className={`
+              const textColor = status
+                ? "text-white"
+                : "text-slate-900 dark:text-white";
+
+              // Tile dengan flip animation kalau udah submitted
+              if (isSubmittedRow) {
+                return (
+                  <Motion.div
+                    key={colIndex}
+                    initial={{
+                      rotateX: 0,
+                    }}
+                    animate={{
+                      rotateX: [0, 90, 0],
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      delay: colIndex * 0.25,
+                      ease: "easeInOut",
+                    }}
+                    className={`
                       w-14 h-14
                       flex items-center justify-center
                       text-2xl font-bold uppercase
                       border-2
-                      ${bg}
+                      rounded
+                      shadow-sm
+                      transition-colors duration-0
                     `}
+                    style={{
+                      backgroundColor: status
+                        ? status === "correct"
+                          ? "#10b981"
+                          : status === "present"
+                          ? "#fbbf24"
+                          : "#94a3b8"
+                        : "#ffffff",
+                      borderColor: status
+                        ? status === "correct"
+                          ? "#10b981"
+                          : status === "present"
+                          ? "#fbbf24"
+                          : "#94a3b8"
+                        : "#d6d3d1",
+                      color: status ? "#ffffff" : "#0f172a",
+                      transitionDelay: `${colIndex * 0.25 + 0.4}s`,
+                    }}
+                  >
+                    {letter}
+                  </Motion.div>
+                );
+              }
+
+              // Tile biasa (belum submitted)
+              return (
+                <Motion.div
+                  key={colIndex}
+                  animate={letter ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.1 }}
+                  className={`
+                    w-14 h-14
+                    flex items-center justify-center
+                    text-2xl font-bold uppercase
+                    border-2
+                    ${bgColor}
+                    ${textColor}
+                    rounded
+                    shadow-sm
+                  `}
                 >
                   {letter}
-                </div>
+                </Motion.div>
               );
             })}
           </div>
