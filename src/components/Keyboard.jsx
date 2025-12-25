@@ -4,13 +4,24 @@ const KEYS = [
   ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"],
 ];
 
-export default function Keyboard({ onKeyPress }) {
+export default function Keyboard({ onKeyPress, keyStatuses = {} }) {
   return (
     <div className="mt-6 space-y-2">
       {KEYS.map((row, rowIndex) => (
         <div key={rowIndex} className="flex justify-center gap-1">
           {row.map((key) => {
             const isWide = key === "ENTER" || key === "⌫";
+
+            const status = keyStatuses[key];
+
+            const bg =
+              status === "correct"
+                ? "bg-green-600"
+                : status === "present"
+                ? "bg-yellow-500"
+                : status === "absent"
+                ? "bg-neutral-700"
+                : "bg-neutral-600";
 
             return (
               <button
@@ -19,7 +30,7 @@ export default function Keyboard({ onKeyPress }) {
                 className={`
                     ${isWide ? "px-4" : "w-10"}
                     h-12
-                    bg-neutral-700 hover:bg-neutral-600
+                    ${bg}
                     rounded
                     text-sm font-bold
                     flex items-center justify-center
