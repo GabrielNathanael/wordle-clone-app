@@ -1,7 +1,7 @@
 {
   "name": "Wordply — Daily Word Challenge",
   "short_name": "Wordply",
-  "description": "A premium Wordle clone. Solve the daily word challenge or practice with unlimited words.",
+  "description": "The ultimate word puzzle challenge. Solve the daily word challenge or practice with unlimited words.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
