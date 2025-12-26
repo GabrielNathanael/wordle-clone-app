@@ -47,22 +47,37 @@ export default function HowToPlay() {
       </div>
 
       <div className="space-y-4 text-sm text-slate-700 dark:text-neutral-300">
-        <p>Guess the Wordle in 6 tries.</p>
+        <p className="font-medium">
+          Guess the 5-letter word in 6 tries or less!
+        </p>
 
-        <ul className="space-y-2 list-disc list-inside">
-          <li>Each guess must be a valid 5-letter word.</li>
-          <li>
-            The color of the tiles will change to show how close your guess was.
-          </li>
-        </ul>
+        <div className="space-y-2">
+          <p className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wide">
+            Rules:
+          </p>
+          <ul className="space-y-1.5 text-xs">
+            <li className="flex gap-2">
+              <span className="text-emerald-500 font-bold">•</span>
+              <span>Each guess must be a valid 5-letter word</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-emerald-500 font-bold">•</span>
+              <span>Press Enter to submit your guess</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-emerald-500 font-bold">•</span>
+              <span>Tile colors change to show how close you are</span>
+            </li>
+          </ul>
+        </div>
 
         <div className="space-y-3 pt-2">
-          <p className="font-semibold text-slate-900 dark:text-white">
+          <p className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wide">
             Examples:
           </p>
 
           {examples.map(({ tiles, explanation }, idx) => (
-            <div key={idx} className="space-y-1">
+            <div key={idx} className="space-y-1.5">
               <div className="flex gap-1">
                 {tiles.map(({ letter, status }, i) => {
                   const bgColor =
@@ -70,7 +85,7 @@ export default function HowToPlay() {
                       ? "bg-emerald-500"
                       : status === "present"
                       ? "bg-amber-400"
-                      : "bg-slate-300 dark:bg-neutral-600";
+                      : "bg-slate-400 dark:bg-neutral-600";
 
                   return (
                     <div
@@ -82,35 +97,67 @@ export default function HowToPlay() {
                   );
                 })}
               </div>
-              <p className="text-xs">{explanation}</p>
+              <p className="text-xs text-slate-600 dark:text-neutral-400">
+                {explanation}
+              </p>
             </div>
           ))}
         </div>
 
-        <div className="pt-2 border-t border-stone-200 dark:border-neutral-700">
-          <p className="font-semibold text-slate-900 dark:text-white mb-1">
+        <div className="pt-3 border-t border-stone-200 dark:border-neutral-700">
+          <p className="font-semibold text-slate-900 dark:text-white mb-2 text-xs uppercase tracking-wide">
             Game Modes:
           </p>
-          <ul className="space-y-1 text-xs">
-            <li>
-              <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                Daily Mode:
-              </span>{" "}
-              One puzzle per day. Solve it to unlock endless Practice Mode!
-            </li>
-            <li>
-              <span className="font-medium text-amber-600 dark:text-amber-400">
-                Challenge:
-              </span>{" "}
-              If you fail the Daily Challenge, it stays locked until tomorrow.
-            </li>
-            <li>
-              <span className="font-medium text-blue-600 dark:text-blue-400">
-                Practice Mode:
-              </span>{" "}
-              Unlimited random words to sharpen your skills.
-            </li>
-          </ul>
+          <div className="space-y-3 text-xs">
+            <div className="flex gap-2">
+              <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
+              <div>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Daily Challenge
+                </span>
+                <p className="text-slate-600 dark:text-neutral-400 mt-0.5">
+                  One unique puzzle per day (resets at midnight UTC). Complete
+                  it successfully to unlock Practice Mode for the rest of the
+                  day. Your stats are tracked here!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5"></div>
+              <div>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  Daily Locked
+                </span>
+                <p className="text-slate-600 dark:text-neutral-400 mt-0.5">
+                  If you fail the Daily Challenge (use all 6 guesses), it stays
+                  locked until the next day. Come back tomorrow for a fresh
+                  challenge!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5"></div>
+              <div>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  Practice Mode
+                </span>
+                <p className="text-slate-600 dark:text-neutral-400 mt-0.5">
+                  Unlocked after completing the Daily Challenge. Play unlimited
+                  random words to sharpen your skills. Stats are not tracked in
+                  this mode.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-stone-200 dark:border-neutral-700">
+          <p className="text-xs text-slate-500 dark:text-neutral-500 italic">
+            💡 Tip: Use your first guess to eliminate common letters like E, A,
+            R, I, O, T!
+          </p>
         </div>
       </div>
     </div>

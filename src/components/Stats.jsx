@@ -5,28 +5,62 @@ export default function Stats({ stats }) {
     stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
 
   const statItems = [
-    { label: "Played", value: stats.played, icon: Target },
-    { label: "Win %", value: winRate, icon: TrendingUp },
-    { label: "Streak", value: stats.currentStreak, icon: Flame },
-    { label: "Max", value: stats.maxStreak, icon: Trophy },
+    {
+      label: "Played",
+      value: stats.played,
+      icon: Target,
+      color: "text-blue-500 dark:text-blue-400",
+    },
+    {
+      label: "Win Rate",
+      value: `${winRate}%`,
+      icon: TrendingUp,
+      color: "text-emerald-500 dark:text-emerald-400",
+    },
+    {
+      label: "Current Streak",
+      value: stats.currentStreak,
+      icon: Flame,
+      color: "text-amber-500 dark:text-amber-400",
+    },
+    {
+      label: "Best Streak",
+      value: stats.maxStreak,
+      icon: Trophy,
+      color: "text-purple-500 dark:text-purple-400",
+    },
   ];
 
   return (
-    <div className="w-full max-w-sm mx-auto bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm px-6 py-4 rounded-2xl border border-stone-200/60 dark:border-neutral-800/60 shadow-sm">
-      <div className="flex justify-between items-center gap-4">
-        {statItems.map((item) => {
+    <div className="w-full max-w-md mx-auto">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-stone-200 dark:border-neutral-700 shadow-sm overflow-hidden">
+        {statItems.map((item, index) => {
+          const Icon = item.icon;
           return (
-            <div key={item.label} className="flex flex-col items-center flex-1">
-              <div className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">
+            <div
+              key={item.label}
+              className={`flex items-center justify-between px-4 py-2.5 ${
+                index !== statItems.length - 1
+                  ? "border-b border-stone-200 dark:border-neutral-700"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 ${item.color}`} />
+                <span className="text-sm font-medium text-slate-700 dark:text-neutral-300">
+                  {item.label}
+                </span>
+              </div>
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
                 {item.value}
-              </div>
-              <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-neutral-500 tracking-wider">
-                {item.label}
-              </div>
+              </span>
             </div>
           );
         })}
       </div>
+      <p className="text-xs text-center text-slate-500 dark:text-neutral-400 mt-2">
+        Statistics are tracked for Daily Mode only
+      </p>
     </div>
   );
 }

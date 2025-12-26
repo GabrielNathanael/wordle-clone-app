@@ -17,7 +17,7 @@ export default function ShareButton({ statuses, todayKey, attempts }) {
       )
       .join("\n");
 
-    const text = `Wordle Clone ${todayKey}\n${attempts}/6\n\n${emojiGrid}\n\nhttps://gabrielnathanael.site/`;
+    const text = `Wordle Clone ${todayKey}\n${attempts}/6\n\n${emojiGrid}\n\nhttps://wordply.gabrielnathanael.site/`;
 
     try {
       await navigator.clipboard.writeText(text);

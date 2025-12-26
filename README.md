@@ -1,9 +1,9 @@
-# Wordly
+# Wordply
 
 A simple Wordle clone built with React and Vite.  
 This project focuses on implementing core Wordle mechanics such as daily challenges, word validation, and keyboard feedback without using a backend or database.
 
-![Wordly Logo](public/logo.png)
+![Wordply Logo](public/logo.png)
 
 ## ✨ Features
 
@@ -24,7 +24,7 @@ This project focuses on implementing core Wordle mechanics such as daily challen
 
 ## 🚀 Live Demo
 
-Check out the live app at: [wordly.gabrielnathanael.site](https://wordly.gabrielnathanael.site/)
+Check out the live app at: [wordply.gabrielnathanael.site](https://wordply.gabrielnathanael.site/)
 
 ## 🛠️ Tech Stack
 

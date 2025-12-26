@@ -1,0 +1,21 @@
+{
+  "name": "Wordply — Daily Word Challenge",
+  "short_name": "Wordply",
+  "description": "A premium Wordle clone. Solve the daily word challenge or practice with unlimited words.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/logo2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

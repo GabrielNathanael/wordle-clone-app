@@ -38,7 +38,6 @@ export default function Grid({
                 ? "text-white"
                 : "text-slate-900 dark:text-white";
 
-              // Tile dengan flip animation kalau udah submitted
               if (isSubmittedRow) {
                 return (
                   <Motion.div
@@ -87,7 +86,6 @@ export default function Grid({
                 );
               }
 
-              // Tile biasa (belum submitted)
               return (
                 <Motion.div
                   key={colIndex}

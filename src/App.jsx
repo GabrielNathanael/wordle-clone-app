@@ -1,3 +1,4 @@
+// ==================== App.jsx ====================
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 
@@ -8,7 +9,7 @@ import ShareButton from "./components/ShareButton";
 import CountdownTimer from "./components/CountdownTimer";
 import HowToPlay from "./components/HowToPlay";
 import Footer from "./components/Footer";
-import ThemeToggle from "./components/ThemeToggle";
+import Navbar from "./components/Navbar";
 import { evaluateGuess } from "./utils/evaluateGuess";
 
 import WORDS from "./data/words.json";
@@ -43,6 +44,10 @@ function dailyCompletedKey(todayKey) {
 
 function dailyFailedKey(todayKey) {
   return `wordle:daily:failed:${todayKey}`;
+}
+
+function dailyResultKey(todayKey) {
+  return `wordle:daily:result:${todayKey}`;
 }
 
 /* ============================= Stats Helpers ============================= */
@@ -86,14 +91,19 @@ export default function App() {
   const [todayKey, setTodayKey] = useState(() => getUTCDateKey());
   const [stats, setStats] = useState(getStats);
 
+  // State untuk trigger re-render pas localStorage berubah
+  const [dailyStatusTrigger, setDailyStatusTrigger] = useState(0);
+
   const dailyCompleted = useMemo(
     () => localStorage.getItem(dailyCompletedKey(todayKey)),
-    [todayKey]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [todayKey, dailyStatusTrigger]
   );
 
   const dailyFailed = useMemo(
     () => localStorage.getItem(dailyFailedKey(todayKey)),
-    [todayKey]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [todayKey, dailyStatusTrigger]
   );
 
   const mode = dailyFailed
@@ -116,6 +126,10 @@ export default function App() {
     dailyFailed ? "locked" : "playing"
   );
   const [shake, setShake] = useState(false);
+  const [showPracticeButton, setShowPracticeButton] = useState(false);
+  const [showNextWordButton, setShowNextWordButton] = useState(false);
+  const [viewingDailyResult, setViewingDailyResult] = useState(false);
+  const [isPlayingPractice, setIsPlayingPractice] = useState(false);
 
   /* ============================= Reset ============================= */
   const resetBoard = useCallback(() => {
@@ -124,12 +138,38 @@ export default function App() {
     setCurrentGuess("");
     setKeyStatuses({});
     setGameStatus("playing");
+    setShowNextWordButton(false);
   }, []);
 
   const startPractice = useCallback(() => {
+    window.location.reload();
+  }, []);
+
+  const nextWord = useCallback(() => {
     resetBoard();
     setAnswer(pickRandomWord(WORDS));
+    setIsPlayingPractice(true); // ← Maintain flag
   }, [resetBoard]);
+
+  const viewDailyResult = useCallback(() => {
+    const savedResult = localStorage.getItem(dailyResultKey(todayKey));
+    if (savedResult) {
+      const { guesses: dailyGuesses, statuses: dailyStatuses } =
+        JSON.parse(savedResult);
+
+      // Reset board state
+      setGuesses(dailyGuesses);
+      setStatuses(dailyStatuses);
+      setAnswer(dailyAnswer);
+      setCurrentGuess("");
+      setKeyStatuses({});
+      setGameStatus("viewing");
+      setViewingDailyResult(true);
+      setShowPracticeButton(false);
+      setShowNextWordButton(false);
+      setIsPlayingPractice(false);
+    }
+  }, [todayKey, dailyAnswer]);
 
   /* ============================= Key Handler ============================= */
   const handleKeyPress = useCallback(
@@ -170,29 +210,49 @@ export default function App() {
 
         /* WIN */
         if (currentGuess === answer) {
-          setStats((prev) => updateStatsOnWin(prev));
+          setCurrentGuess("");
 
-          if (mode === "daily") {
+          setGameStatus("won");
+
+          if (mode === "daily" && !isPlayingPractice) {
+            setStats((prev) => updateStatsOnWin(prev));
             localStorage.setItem(dailyCompletedKey(todayKey), "1");
+
+            const nextStatuses = [...statuses, evaluation];
+            localStorage.setItem(
+              dailyResultKey(todayKey),
+              JSON.stringify({ guesses: nextGuesses, statuses: nextStatuses })
+            );
+
+            setDailyStatusTrigger((prev) => prev + 1);
+
             toast.success("Brilliant! Practice mode unlocked");
-            setTimeout(() => startPractice(), 2000);
+            setShowPracticeButton(true);
             return;
           }
 
-          toast.success("Correct! Next word...");
-          setTimeout(() => {
-            resetBoard();
-            setAnswer(pickRandomWord(WORDS));
-          }, 2000);
+          // Practice mode win
+          toast.success("Correct!");
+          setShowNextWordButton(true);
           return;
         }
 
         /* LOSE */
         if (nextGuesses.length === 6) {
-          setStats((prev) => updateStatsOnLoss(prev));
+          setCurrentGuess("");
 
-          if (mode === "daily") {
+          if (mode === "daily" && !isPlayingPractice) {
+            setStats((prev) => updateStatsOnLoss(prev));
             localStorage.setItem(dailyFailedKey(todayKey), "1");
+
+            const nextStatuses = [...statuses, evaluation];
+            localStorage.setItem(
+              dailyResultKey(todayKey),
+              JSON.stringify({ guesses: nextGuesses, statuses: nextStatuses })
+            );
+
+            setDailyStatusTrigger((prev) => prev + 1);
+
             setGameStatus("locked");
             toast.error(
               `The word was ${answer.toUpperCase()}. See you tomorrow!`,
@@ -207,6 +267,7 @@ export default function App() {
           toast.error(`The word was ${answer.toUpperCase()}`, {
             duration: 5000,
           });
+          setShowNextWordButton(true);
           return;
         }
 
@@ -228,11 +289,11 @@ export default function App() {
       answer,
       currentGuess,
       guesses,
+      statuses,
       gameStatus,
       mode,
-      resetBoard,
-      startPractice,
       todayKey,
+      isPlayingPractice,
     ]
   );
 
@@ -256,11 +317,22 @@ export default function App() {
   useEffect(() => {
     const id = setInterval(() => {
       const tk = getUTCDateKey();
-      setTodayKey((prev) => (prev === tk ? prev : tk));
+      if (tk !== todayKey) {
+        setTodayKey(tk);
+        setGuesses([]);
+        setStatuses([]);
+        setCurrentGuess("");
+        setKeyStatuses({});
+        setGameStatus("playing");
+        setShowNextWordButton(false);
+        setShowPracticeButton(false);
+        setViewingDailyResult(false);
+        setAnswer(pickDailyWord(WORDS, tk));
+      }
     }, 30_000);
 
     return () => clearInterval(id);
-  }, []);
+  }, [todayKey]);
 
   /* ============================= New Day Handler ============================= */
   const lastToastMode = useRef(null);
@@ -282,40 +354,60 @@ export default function App() {
   }, [mode]);
 
   /* ============================= UI ============================= */
+  const actualMode = isPlayingPractice ? "practice" : mode;
+
   const subtitle =
-    mode === "daily"
+    actualMode === "daily"
       ? `Daily Challenge`
-      : mode === "daily-locked"
+      : actualMode === "daily-locked"
       ? `Daily Locked`
       : "Practice Mode";
 
   const modeBadgeColor =
-    mode === "daily"
+    actualMode === "daily"
       ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
-      : mode === "daily-locked"
+      : actualMode === "daily-locked"
       ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
       : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700";
 
+  const isWon = gameStatus === "won";
+  const hasDailyResult = localStorage.getItem(dailyResultKey(todayKey));
+
   return (
-    <div className="min-h-screen w-full bg-stone-50 dark:bg-neutral-950 text-slate-900 dark:text-white flex flex-col items-center px-4 pt-12 pb-8 transition-colors overflow-x-hidden">
+    <div className="min-h-screen w-full bg-stone-50 dark:bg-neutral-950 text-slate-900 dark:text-white flex flex-col items-center px-4 pt-24 pb-8 transition-colors overflow-x-hidden">
+      <Navbar />
       {/* Header */}
       <div className="w-full max-w-lg flex flex-col mb-6 gap-2">
         <div className="relative flex items-center justify-center w-full">
           <img
             src="/logo.png"
-            alt="Wordly"
+            alt="Wordply"
             className="h-10 w-auto object-contain"
           />
-          <div className="absolute right-0">
-            <ThemeToggle />
-          </div>
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2 items-center flex-wrap mt-2">
           <span
             className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold border transition-all duration-300 ${modeBadgeColor}`}
           >
             {subtitle}
           </span>
+
+          {mode === "practice" && hasDailyResult && !viewingDailyResult && (
+            <button
+              onClick={viewDailyResult}
+              className="px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold border bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
+            >
+              View Daily Result
+            </button>
+          )}
+          {viewingDailyResult && (
+            <button
+              onClick={startPractice}
+              className="px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold border bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all"
+            >
+              Back to Practice
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,11 +417,6 @@ export default function App() {
           <CountdownTimer />
         </div>
       )}
-
-      {/* Stats */}
-      <div className="mb-8">
-        <Stats stats={stats} />
-      </div>
 
       {/* Grid */}
       <div className={shake ? "animate-shake" : ""}>
@@ -341,20 +428,17 @@ export default function App() {
       </div>
 
       {/* Feedback & Status Area */}
-      <div className="flex flex-col items-center justify-center min-h-15 my-4 gap-4 w-full">
+      <div className="flex flex-col items-center justify-center my-4 gap-3 w-full">
         {gameStatus === "lost" && mode === "practice" && (
           <div className="flex flex-col items-center gap-2">
             <p className="text-red-500 font-bold">
               The word was: {answer.toUpperCase()}
             </p>
             <button
-              onClick={() => {
-                resetBoard();
-                setAnswer(pickRandomWord(WORDS));
-              }}
+              onClick={nextWord}
               className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
             >
-              Play Again
+              Next Word
             </button>
           </div>
         )}
@@ -368,10 +452,39 @@ export default function App() {
           </div>
         )}
 
-        {/* Share Button (show after win) */}
-        {(gameStatus === "won" ||
-          (guesses.length > 0 && guesses[guesses.length - 1] === answer)) && (
-          <div>
+        {/* Share Button + Practice/Next Button */}
+        {isWon && !viewingDailyResult && (
+          <div className="flex flex-col items-center gap-2">
+            <ShareButton
+              statuses={statuses}
+              todayKey={todayKey}
+              attempts={guesses.length}
+            />
+            {showPracticeButton && (
+              <button
+                onClick={startPractice}
+                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
+              >
+                Start Practice Mode
+              </button>
+            )}
+            {showNextWordButton && (
+              <button
+                onClick={nextWord}
+                className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
+              >
+                Next Word
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Viewing Daily Result */}
+        {viewingDailyResult && (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-slate-600 dark:text-neutral-400">
+              Your daily result
+            </p>
             <ShareButton
               statuses={statuses}
               todayKey={todayKey}
@@ -382,8 +495,15 @@ export default function App() {
       </div>
 
       {/* Keyboard Area */}
-      <div className="flex justify-center pb-8">
-        <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
+      {!viewingDailyResult && gameStatus === "playing" && (
+        <div className="flex justify-center pb-8 w-full">
+          <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="mb-2 mt-6">
+        <Stats stats={stats} />
       </div>
 
       {/* How to Play */}
